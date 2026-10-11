@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ludo Game</title>
+  <style>
+    :root {
+      --board-size: 620px;
+      --track-radius: 200px;
+      --center: 310px;
+      --red: #ef5350;
+      --green: #66bb6a;
+      --yellow: #ffd54f;
+      --blue: #42a5f5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #131922, #23314a);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app {
+      display: flex;
+      gap: 26px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 20px;
+    }
+
+    .board-wrap {
+      position: relative;
+      width: var(--board-size);
+      height: var(--board-size);
+      border-radius: 24px;
+      background: #d9d9d9;
+      box-shadow: 0 18px 45px rgba(0,0,0,.35);
+      overflow: hidden;
+      border: 16px solid #c6bfb7;
+    }
+
+    .board {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, #dfe7df 0%, #c6d3c8 48%, #adbbaa 100%);
+    }
+
+    .track-layer, .token-layer, .home-layer {
+      position: absolute;
+      inset: 0;
+    }
+
+    .track-dot {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(40, 45, 52, 0.7);
+      border: 2px solid rgba(255,255,255,0.6);
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.15);
+    }
+
+    .center-pill {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 180px;
+      height: 180px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(33, 33, 33, 0.12);
+      border: 9px solid rgba(0,0,0,0.15);
+      box-shadow: inset 0 0 0 10px rgba(255,255,255,0.12);
+    }
+
+    .home-base {
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 22px;
+      border: 18px solid rgba(0,0,0,0.1);
+      box-shadow: inset 0 0 0 6px rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .home-base.red { left: 30px; top: 30px; background: rgba(239, 83, 80, 0.22); }
+    .home-base.green { right: 30px; top: 30px; background: rgba(102, 187, 106, 0.22); }
+    .home-base.yellow { left: 30px; bottom: 30px; background: rgba(255, 213, 79, 0.22); }
+    .home-base.blue { right: 30px; bottom: 30px; background: rgba(66, 165, 245, 0.22); }
+
+    .base-slot {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.14);
+      border: 3px solid rgba(0,0,0,0.14);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2);
+    }
+
+    .token {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 2px solid rgba(0,0,0,0.45);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      z-index: 5;
+    }
+
+    .token:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+    }
+
+    .token.highlight {
+      box-shadow: 0 0 0 5px rgba(255,255,255,0.8), 0 0 18px rgba(255,255,255,0.9);
+    }
+
+    .token.red { background: var(--red); }
+    .token.green { background: var(--green); }
+    .token.yellow { background: var(--yellow); }
+    .token.blue { background: var(--blue); }
+
+    .token.finished {
+      outline: 3px solid rgba(255,255,255,0.85);
+      outline-offset: 2px;
+    }
+
+    .panel {
+      width: 260px;
+      padding: 18px 18px 12px;
+      border-radius: 18px;
+      background: rgba(18, 26, 38, 0.8);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .status {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      min-height: 22px;
+    }
+
+    .turn-list {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0 18px;
+    }
+
+    .turn-player {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 14px;
+    }
+
+    .chip {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,0.25);
+    }
+
+    .chip.red { background: var(--red); }
+    .chip.green { background: var(--green); }
+    .chip.yellow { background: var(--yellow); }
+    .chip.blue { background: var(--blue); }
+
+    .active {
+      background: rgba(255,255,255,0.14);
+      border-color: rgba(255,255,255,0.28);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffeb3b, #f9a825);
+      color: #1d1d1d;
+      font-weight: 800;
+      font-size: 18px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: brightness(1.03);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .dice-value {
+      font-size: 32px;
+      font-weight: 800;
+      text-align: center;
+      margin-top: 14px;
+      min-height: 40px;
+      color: #fff;
+    }
+
+    @media (max-width: 920px) {
+      .app { flex-direction: column; }
+      .panel { width: min(92vw, 360px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <div class="track-layer" id="trackLayer"></div>
+        <div class="home-layer" id="homeLayer"></div>
+        <div class="token-layer" id="tokenLayer"></div>
+        <div class="center-pill"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="status" id="status">Red to play</div>
+
+      <div class="turn-list">
+        <div class="turn-player active" data-player="red">
+          <span><span class="chip red"></span> Red</span>
+          <strong id="redInfo">0</strong>
+        </div>
+        <div class="turn-player" data-player="green">
+          <span><span class="chip green"></span> Green</span>
+          <strong id="greenInfo">0</strong>
+        </div>
+        <div class="turn-player" data-player="yellow">
+          <span><span class="chip yellow"></span> Yellow</span>
+          <strong id="yellowInfo">0</strong>
+        </div>
+        <div class="turn-player" data-player="blue">
+          <span><span class="chip blue"></span> Blue</span>
+          <strong id="blueInfo">0</strong>
+        </div>
+      </div>
+
+      <button id="rollBtn">Roll Dice</button>
+      <div class="dice-value" id="diceValue">-</div>
+    </div>
+  </div>
+
+  <script>
+    const playerOrder = ["red", "green", "yellow", "blue"];
+    const trackPoints = [];
+    const boardCenter = 310;
+    const trackRadius = 200;
+
+    for (let i = 0; i < 52; i++) {
+      const angle = -Math.PI / 2 + (i / 52) * (Math.PI * 2);
+      const x = boardCenter + Math.cos(angle) * trackRadius;
+      const y = boardCenter + Math.sin(angle) * trackRadius;
+      trackPoints.push({ x, y });
+    }
+
+    const safeCells = new Set([0, 7, 13, 20, 26, 33, 39, 46]);
+
+    const players = {
+      red: { name: "Red", start: 0, finishOffset: {x: -26, y: -26}, homeSlots: [] },
+      green: { name: "Green", start: 13, finishOffset: {x: 30, y: -26}, homeSlots: [] },
+      yellow: { name: "Yellow", start: 26, finishOffset: {x: -26, y: 30}, homeSlots: [] },
+      blue: { name: "Blue", start: 39, finishOffset: {x: 30, y: 30}, homeSlots: [] }
+    };
+
+    const playerBaseCoords = {
+      red: [
+        {x: 105, y: 110},
+        {x: 180, y: 110},
+        {x: 105, y: 185},
+        {x: 180, y: 185}
+      ],
+      green: [
+        {x: 435, y: 110},
+        {x: 510, y: 110},
+        {x: 435, y: 185},
+        {x: 510, y: 185}
+      ],
+      yellow: [
+        {x: 105, y: 435},
+        {x: 180, y: 435},
+        {x: 105, y: 510},
+        {x: 180, y: 510}
+      ],
+      blue: [
+        {x: 435, y: 435},
+        {x: 510, y: 435},
+        {x: 435, y: 510},
+        {x: 510, y: 510}
+      ]
+    };
+
+    const state = {
+      currentPlayer: "red",
+      diceValue: null,
+      rolled: false,
+      gameOver: false,
+      selectedToken: null,
+      tokens: []
+    };
+
+    function initBoard() {
+      buildTrackDots();
+      buildHomeBases();
+      makeTokens();
+      render();
+    }
+
+    function buildTrackDots() {
+      const layer = document.getElementById("trackLayer");
+      for (let i = 0; i < trackPoints.length; i++) {
+        const dot = document.createElement("div");
+        dot.className = "track-dot";
+        dot.style.left = `${trackPoints[i].x}px`;
+        dot.style.top = `${trackPoints[i].y}px`;
+        layer.appendChild(dot);
+      }
+    }
+
+    function buildHomeBases() {
+      const layer = document.getElementById("homeLayer");
+      for (const playerName of playerOrder) {
+        const base = document.createElement("div");
+        base.className = `home-base ${playerName}`;
+        const slots = playerBaseCoords[playerName];
+        for (let i = 0; i < slots.length; i++) {
+          const slot = document.createElement("div");
+          slot.className = "base-slot";
+          slot.style.left = `${slots[i].x}px`;
+          slot.style.top = `${slots[i].y}px`;
+          base.appendChild(slot);
+          players[playerName].homeSlots.push(slot);
+        }
+        layer.appendChild(base);
+      }
+    }
+
+    function makeTokens() {
+      state.tokens = [];
+      for (const playerName of playerOrder) {
+        for (let i = 0; i < 4; i++) {
+          const token = {
+            id: `${playerName}-${i}`,
+            player: playerName,
+            index: i,
+            progress: -1,
+            finished: false
+          };
+          state.tokens.push(token);
+        }
+      }
+    }
+
+    function render() {
+      const layer = document.getElementById("tokenLayer");
+      layer.innerHTML = "";
+
+      for (const token of state.tokens) {
+        const el = document.createElement("button");
+        el.className = `token ${token.player}`;
+        el.dataset.id = token.id;
+        el.type = "button";
+
+        if (token.finished) el.classList.add("finished");
+        if (state.selectedToken && state.selectedToken.id === token.id) el.classList.add("highlight");
+
+        const pos = getTokenPosition(token);
+        el.style.left = `${pos.x}px`;
+        el.style.top = `${pos.y}px`;
+
+        const valid = isValidMove(token, state.diceValue);
+        if (state.rolled && valid && token.player === state.currentPlayer) {
+          el.classList.add("highlight");
+        }
+
+        el.addEventListener("click", () => handleTokenClick(token));
+        layer.appendChild(el);
+      }
+
+      const statusEl = document.getElementById("status");
+      const diceEl = document.getElementById("diceValue");
+      const rollBtn = document.getElementById("rollBtn");
+
+      if (state.gameOver) {
+        statusEl.textContent = `${players[state.currentPlayer].name} wins!`;
+        rollBtn.disabled = true;
+      } else {
+        statusEl.textContent = `${players[state.currentPlayer].name} to play`;
+      }
+
+      diceEl.textContent = state.diceValue === null ? "-" : state.diceValue;
+      rollBtn.disabled = state.rolled || state.gameOver;
+
+      document.querySelectorAll(".turn-player").forEach((row) => {
+        const p = row.dataset.player;
+        row.classList.toggle("active", p === state.currentPlayer && !state.gameOver);
+        const count = state.tokens.filter(t => t.player === p && t.finished).length;
+        document.getElementById(`${p}Info`).textContent = count;
+      });
+    }
+
+    function getTokenPosition(token) {
+      if (token.finished) {
+        const offset = players[token.player].finishOffset;
+        return {
+          x: boardCenter + offset.x,
+          y: boardCenter + offset.y
+        };
+      }
+
+      if (token.progress === -1) {
+        const home = playerBaseCoords[token.player][token.index];
+        return { x: home.x + 18, y: home.y + 18 };
+      }
+
+      if (token.progress >= 52) {
+        const offset = players[token.player].finishOffset;
+        return {
+          x: boardCenter + offset.x + (token.index * 10) - 15,
+          y: boardCenter + offset.y + (token.index * 10) - 15
+        };
+      }
+
+      const idx = (players[token.player].start + token.progress) % 52;
+      const point = trackPoints[idx];
+      return { x: point.x, y: point.y };
+    }
+
+    function isValidMove(token, roll) {
+      if (state.gameOver) return false;
+      if (token.player !== state.currentPlayer) return false;
+      if (roll === null || roll === undefined) return false;
+      if (token.finished) return false;
+
+      if (token.progress === -1) {
+        return roll === 6;
+      }
+
+      return token.progress + roll <= 57;
+    }
+
+    function moveToken(token, roll) {
+      if (token.progress === -1) {
+        if (roll !== 6) return;
+        token.progress = 0;
+      } else {
+        token.progress += roll;
+      }
+
+      const landedIndex = getLandedTrackIndex(token);
+      if (landedIndex !== null) {
+        const enemyTokens = state.tokens.filter(other => {
+          if (other.id === token.id || other.player === token.player) return false;
+          if (other.finished) return false;
+          if (other.progress === -1) return false;
+          return getLandedTrackIndex(other) === landedIndex;
+        });
+
+        for (const enemy of enemyTokens) {
+          if (safeCells.has(landedIndex)) continue;
+          enemy.progress = -1;
+        }
+      }
+
+      if (token.progress >= 57) {
+        token.progress = 57;
+        token.finished = true;
+      }
+
+      if (checkWinner(token.player)) {
+        state.gameOver = true;
+      }
+    }
+
+    function getLandedTrackIndex(token) {
+      if (token.progress === -1 || token.finished) return null;
+      if (token.progress >= 52) return null;
+      return (players[token.player].start + token.progress) % 52;
+    }
+
+    function checkWinner(playerName) {
+      const playerTokens = state.tokens.filter(token => token.player === playerName);
+      return playerTokens.every(token => token.finished);
+    }
+
+    function handleTokenClick(token) {
+      if (state.gameOver || !state.rolled) return;
+      if (!isValidMove(token, state.diceValue)) return;
+
+      moveToken(token, state.diceValue);
+      state.rolled = false;
+      state.diceValue = null;
+      state.selectedToken = null;
+      render();
+
+      if (state.gameOver) return;
+
+      setTimeout(() => {
+        state.currentPlayer = nextPlayer(state.currentPlayer);
+        render();
+      }, 250);
+    }
+
+    function nextPlayer(playerName) {
+      const idx = playerOrder.indexOf(playerName);
+      return playerOrder[(idx + 1) % playerOrder.length];
+    }
+
+    document.getElementById("rollBtn").addEventListener("click", () => {
+      if (state.rolled || state.gameOver) return;
+
+      const value = Math.floor(Math.random() * 6) + 1;
+      state.diceValue = value;
+      state.rolled = true;
+
+      const validTokens = state.tokens.filter(token => token.player === state.currentPlayer && isValidMove(token, value));
+
+      if (validTokens.length === 0) {
+        state.rolled = false;
+        state.diceValue = null;
+
+        setTimeout(() => {
+          state.currentPlayer = nextPlayer(state.currentPlayer);
+          render();
+        }, 600);
+        return;
+      }
+
+      render();
+    });
+
+    initBoard();
+  </script>
+</body>
+</html>
